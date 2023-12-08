@@ -108,21 +108,22 @@ public class SpaceInvaders {
     static public class Mover extends ScriptableBehavior{
         Mover(GameObject g) {
             super(g);
+            gameObject.Translate(225, 380);
         }
 
         @Override
         public void Start() {
-            gameObject.Translate(250, 380);
+            
         }
 
         @Override
         public void Update(){
             if(Input.GetKeyDown('a')){
-                gameObject.Translate(-1,0);
+                gameObject.Translate(-4,0);
                 System.out.println("fuck");
             }
             if(Input.GetKeyDown('d')){
-                gameObject.Translate(1,0);
+                gameObject.Translate(4,0);
                 System.out.println("fuck");
             }
         }

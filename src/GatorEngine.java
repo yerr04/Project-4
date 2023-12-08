@@ -199,9 +199,7 @@ public class GatorEngine {
     //TODO: Redraw the Background(), then Draw() and Update() all GameObjects in OBJECTLIST
     static void Update(){
         Background();
-        if (SpaceInvaders.gameState == SpaceInvaders.GameState.PLAY) {
-            SpaceInvaders.InGame();
-        }
+        
         for (GameObject g : OBJECTLIST){
             g.Draw(RENDERER);
             g.Update();
