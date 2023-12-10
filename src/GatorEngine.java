@@ -204,7 +204,7 @@ public class GatorEngine {
             g.Draw(RENDERER);
             g.Update();
         }
-        //Tests.TestControllerUpdate();
+        SpaceInvaders.updateGame();
         UpdateObjectList();
         
     }

@@ -73,5 +73,4 @@ public class Material {
 
     public void setImg(BufferedImage img){this.img=img;}
 
-
 }
