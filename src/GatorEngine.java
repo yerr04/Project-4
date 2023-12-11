@@ -13,8 +13,6 @@ public class GatorEngine {
     static JLabel DISPLAY_LABEL;
     static BufferedImage DISPLAY;
     static int WIDTH=500, HEIGHT=500;
-    Tests tests = new Tests();
-    Pong pong = new Pong();
     SpaceInvaders spaceInvaders = new SpaceInvaders();
 
     //Engine Components (things that are "more" related to the engine structures)

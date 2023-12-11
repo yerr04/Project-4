@@ -49,6 +49,9 @@ public class SpaceInvaders {
     // game over
     static boolean gameOver = false;
 
+    // power up chance
+    static double POWER_UP_CHANCE = 1;
+
     // start game
     static void StartGame() {
         //set game state to start
@@ -68,7 +71,6 @@ public class SpaceInvaders {
         background.material = new Material("./assets/Background.png");
         // add background to object list
         GatorEngine.Create(background);
-        System.out.println("InGame");
 
         // create player
         player = new GameObject();
@@ -88,12 +90,14 @@ public class SpaceInvaders {
         LevelSetup();
         // create enemies
         CreateEnemies();
+        spawnPowerUp();
     }
 
     static void LevelTwo(){
         LevelSetup();
         // create new enemies
         CreateEnemies();
+        spawnPowerUp();
 
         // change 5 random enemies to a different color
         Random rand = new Random();
@@ -111,7 +115,7 @@ public class SpaceInvaders {
         LevelSetup();
         // create new enemies
         CreateEnemies();
-
+        spawnPowerUp();
         // change 5 random enemies to a different color
         Random rand = new Random();
         for (int i = 0; i < 5; i++) {
@@ -121,7 +125,6 @@ public class SpaceInvaders {
             enemies.get(randomIndex).scripts.remove(1);
             enemies.get(randomIndex).scripts.add(new LevelThreeEnemy(enemies.get(randomIndex)));
         }
-
     }
 
     static void updateGame() {
@@ -214,6 +217,23 @@ public class SpaceInvaders {
             life.Translate(25 + (i * 25), 450);
             GatorEngine.Create(life);
             livesIcons.add(life);
+        }
+    }
+
+    static void spawnPowerUp() {
+        // Power-up spawning logic, only spawn one per level
+        if (Math.random() < POWER_UP_CHANCE && !playerIsInvincible) {
+        GameObject powerUp = new GameObject();
+        powerUp.shape = new Rectangle2D.Double(0, 0, 25, 25);
+        powerUp.material = new Material("./assets/invincible_item.png");
+        // random x,y position located above the player
+        Random rand = new Random();
+        int randomX = rand.nextInt(400);
+        int randomY = rand.nextInt(200);
+        powerUp.Translate(randomX, randomY);
+        powerUp.scripts.add(new PowerUp(powerUp));
+        powerUp.scripts.add(new BulletCollision(powerUp));
+        GatorEngine.Create(powerUp);
         }
     }
 
@@ -340,7 +360,7 @@ public class SpaceInvaders {
             }
 
             if (Math.random() < getShootingProbability()) {
-                fireBullet();
+                fireEnemyBullet();
             }
         }        
     
@@ -352,7 +372,7 @@ public class SpaceInvaders {
             return shootingProbability;
         }
 
-        private void fireBullet() {
+        private void fireEnemyBullet() {
             // same logic in the player bullet, but the bullet is red and moves down
             enemyBullet = new GameObject();
             enemyBullet.shape = new Rectangle2D.Double(gameObject.transform.getTranslateX(), gameObject.transform.getTranslateY(), 5, 10); // Bullet size and initial position
@@ -367,7 +387,6 @@ public class SpaceInvaders {
         }
     }
     
-
     static public class MouseHover extends ScriptableBehavior{
         String startHover;
         String startNormal;
@@ -421,7 +440,7 @@ public class SpaceInvaders {
     }
 
     static public class Mover extends ScriptableBehavior{
-        private double lastShotTime = 0;
+        private float lastShotTime = 0;
         private float movementSpeed = 4;
         private float shotDelay = 500;
         Mover(GameObject g) {
@@ -445,14 +464,68 @@ public class SpaceInvaders {
             }
             // shoot when space is pressed
             if(Input.GetKeyDown(' ') && lastShotTime >= 500) {
-                // Create a default game object
-                bullet = new GameObject();
-                bullet.shape = new Rectangle2D.Double(gameObject.transform.getTranslateX(), gameObject.transform.getTranslateY(), 5, 10); // Bullet size and initial position
-                bullet.material = new Material(Color.WHITE, Color.WHITE, 0); // Bullet color
-                bullet.scripts.add(new BulletMover(bullet)); // Bullet movement script
-                GatorEngine.Create(bullet);
-                bullets.add(bullet); // Add bullet to the bullet list
+                fireBullet();
                 lastShotTime = 0;
+            }
+        }
+
+        public void fireBullet(){
+            if (lastShotTime >= shotDelay) {
+                bullet = new GameObject();
+                bullet.shape = new Rectangle2D.Double(gameObject.transform.getTranslateX(), gameObject.transform.getTranslateY(), 5, 10);
+                bullet.material = new Material(Color.WHITE, Color.WHITE, 0);
+                bullet.scripts.add(new BulletMover(bullet));
+                GatorEngine.Create(bullet);
+                bullets.add(bullet);
+                lastShotTime = 0;
+            }
+        }
+        
+
+        public void setPowerUp(boolean active){
+            if (active) {
+                movementSpeed = 10;
+                shotDelay = 50;
+            } else {
+                movementSpeed = 4;
+                shotDelay = 500;
+            }
+        }
+    }
+
+    static public class PowerUp extends ScriptableBehavior {
+        PowerUp(GameObject g) {
+            super(g);
+        }
+
+        @Override
+        public void Start() {
+        }
+    
+        @Override
+        public void Update() {
+            for (GameObject bullet : bullets) {
+                if (gameObject.CollidesWith(bullet)) {
+                    // Activate power-up effects
+                    playerIsInvincible = true;
+                    player.material = new Material("./assets/ShipUpgrade.png");
+                    ((Mover)player.scripts.get(0)).setPowerUp(true);
+        
+                    // Schedule to deactivate effects after 10 seconds
+                    new Timer().schedule(new TimerTask() {
+                        @Override
+                        public void run() {
+                            playerIsInvincible = false;
+                            ((Mover)player.scripts.get(0)).setPowerUp(false);
+                            player.material = new Material("./assets/Ship.png");
+                        }
+                    }, 10000);
+        
+                    GatorEngine.Delete(gameObject); // Remove power-up item
+                    GatorEngine.Delete(bullet); // Remove the bullet
+                    bullets.remove(bullet); // Remove bullet from list
+                    break;
+                }
             }
         }
     }
@@ -528,11 +601,21 @@ public class SpaceInvaders {
             // Check collision with all enemy bullets
             for (GameObject enemyBullet : enemyBullets) {
                 if (gameObject.CollidesWith(enemyBullet)) {
-                    GatorEngine.Delete(enemyBullet); // Delete enemy bullet
-                    enemyBullets.remove(enemyBullet); // Remove bullet from the list
-                    lives -= 1; // Decrease life
-                    updateLivesDisplay(); // Update lives display on screen
-                    changePlayerIcon(); // Change player icon to indicate hit
+                    if (!playerIsInvincible) {
+                        playerIsInvincible = true;
+                        GatorEngine.Delete(enemyBullet); // Delete enemy bullet
+                        enemyBullets.remove(enemyBullet); // Remove bullet from the list
+                        lives -= 1; // Decrease life
+                        updateLivesDisplay(); // Update lives display
+                        changePlayerIcon(); // Blink player icon
+        
+                        new Timer().schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                playerIsInvincible = false;
+                            }
+                        }, 3000); // Set invincibility duration to 3 seconds
+                    }
                     if (lives == 0) {
                         gameOver = true; // Set game over flag
                         // clear everything
@@ -560,7 +643,7 @@ public class SpaceInvaders {
 
             // if the enemies reach the player ship, game over
             for (GameObject enemy : enemies) {
-                if (enemy.CollidesWith(gameObject)) {
+                if (enemy.CollidesWith(gameObject) || enemy.transform.getTranslateY() > 400) {
                     gameOver = true; // Set game over flag
                     // clear everything
                     GatorEngine.Delete(background);
@@ -615,12 +698,16 @@ public class SpaceInvaders {
             }).start();
         
             playerIsInvincible = true; // Set a flag to indicate the player is invincible
+            // remove the collision script
+            player.scripts.remove(1);
             new Timer().schedule(new TimerTask() {
                 @Override
                 public void run() {
                     playerIsInvincible = false; // Reset invincibility flag after duration
                 }
             }, invincibilityDuration);
+            player.scripts.add(new PlayerCollision(player)); // Add collision script back after duration
         }
     }
+
 }
